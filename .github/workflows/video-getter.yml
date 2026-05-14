@@ -1,0 +1,30 @@
+name: Download Video
+
+on:
+  workflow_dispatch:
+    inputs:
+      video_url:
+        description: 'لینک ویدیو'
+        required: true
+        type: string
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup yt-dlp
+        uses: AnimMouse/setup-yt-dlp@v1
+
+      - name: Download video
+        run: |
+          yt-dlp -f "best" -o "my-video.%(ext)s" "${{ github.event.inputs.video_url }}"
+          echo "VIDEO_FILE=$(ls *.mp4 *.webm *.mkv 2>/dev/null | head -n 1)" >> $GITHUB_ENV
+
+      - name: Upload video to repository
+        uses: actions/upload-artifact@v4
+        with:
+          name: downloaded-video
+          path: ${{ env.VIDEO_FILE }}
