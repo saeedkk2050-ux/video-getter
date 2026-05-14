@@ -1,4 +1,4 @@
-name: Download Video
+name: Download Video with Quality Selection
 
 on:
   workflow_dispatch:
@@ -7,6 +7,19 @@ on:
         description: 'لینک ویدیو'
         required: true
         type: string
+      quality:
+        description: 'کیفیت مورد نظر'
+        required: true
+        default: 'best'
+        type: choice
+        options:
+          - 'best'
+          - '1080'
+          - '720'
+          - '480'
+          - '360'
+          - '240'
+          - '144'
 
 jobs:
   download:
@@ -18,13 +31,26 @@ jobs:
       - name: Setup yt-dlp
         uses: AnimMouse/setup-yt-dlp@v1
 
-      - name: Download video
-        run: |
-          yt-dlp -f "best" -o "my-video.%(ext)s" "${{ github.event.inputs.video_url }}"
-          echo "VIDEO_FILE=$(ls *.mp4 *.webm *.mkv 2>/dev/null | head -n 1)" >> $GITHUB_ENV
+      - name: Create download folder
+        run: mkdir -p downloaded-videos
 
-      - name: Upload video to repository
+      - name: Download video with selected quality
+        run: |
+          QUALITY="${{ github.event.inputs.quality }}"
+          
+          if [ "$QUALITY" = "best" ]; then
+            yt-dlp -f "best" -o "downloaded-videos/%(title)s.%(ext)s" "${{ github.event.inputs.video_url }}"
+          else
+            yt-dlp -f "bestvideo[height<=$QUALITY]+bestaudio/best[height<=$QUALITY]" \
+                   -o "downloaded-videos/%(title)s.%(ext)s" \
+                   "${{ github.event.inputs.video_url }}"
+          fi
+
+      - name: List downloaded files
+        run: ls -la downloaded-videos/
+
+      - name: Upload entire folder
         uses: actions/upload-artifact@v4
         with:
-          name: downloaded-video
-          path: ${{ env.VIDEO_FILE }}
+          name: downloaded-videos
+          path: downloaded-videos/
